@@ -454,6 +454,7 @@ function PublicDownloadPage() {
   const [sourceEntries, setSourceEntries] = useState([]);
   const [antivirusWarningDismissed, setAntivirusWarningDismissed] = useState(false);
   const [isGameInstalled, setIsGameInstalled] = useState(false);
+  const [hasInstalledGameFiles, setHasInstalledGameFiles] = useState(false);
   const [showProviderBlockedDialog, setShowProviderBlockedDialog] = useState(false);
   // The game is installed or a folder with its name already exists, so the
   // download waits until the user decides what to do with the existing copy.
@@ -512,10 +513,17 @@ function PublicDownloadPage() {
   // Check if game is already installed
   useEffect(() => {
     if (!gameData?.game) return;
+    setHasInstalledGameFiles(false);
+    setIsGameInstalled(false);
     installedGamesService
       .checkGameStatus(gameData.game, gameData.version)
       .then(({ isInstalled, needsUpdate }) => {
+        setHasInstalledGameFiles(isInstalled);
         setIsGameInstalled(isInstalled && !needsUpdate && !gameData.isUpdating);
+      })
+      .catch(() => {
+        setHasInstalledGameFiles(false);
+        setIsGameInstalled(false);
       });
   }, [gameData?.game, gameData?.version, gameData?.isUpdating]);
 
@@ -1874,6 +1882,8 @@ function PublicDownloadPage() {
   const filesUnavailable =
     settings.gameSource !== "fitgirl" &&
     !isExternalSourcesMode &&
+    !hasInstalledGameFiles &&
+    !(state?.fromProfileGames && Number(gameData?.playTime) > 0) &&
     !Object.values(downloadLinks).some(
       links =>
         Array.isArray(links) &&
