@@ -63,6 +63,7 @@ import {
 } from "lucide-react";
 import EarnedBadges from "@/components/EarnedBadges";
 import ProfileReviews from "@/components/ProfileReviews";
+import GameContextMenu from "@/components/GameContextMenu";
 
 const VUS = ["online", "away", "busy", "invisible"];
 
@@ -188,6 +189,9 @@ const Profile = () => {
     return localStorage.getItem("useEmoji") === "false" ? "image" : null;
   });
   const [Games, SetGames] = UseState([]);
+  const [GameMenuOpen, SetGameMenuOpen] = UseState(false);
+  const [GameMenuPosition, SetGameMenuPosition] = UseState({ x: 0, y: 0 });
+  const [GameMenuGame, SetGameMenuGame] = UseState(null);
   const [AchievementsLeaderboard, SetAchievementsLeaderboard] = UseState([]);
   const [IsLoadingAchievementsLeaderboard, SetIsLoadingAchievementsLeaderboard] =
     UseState(false);
@@ -1270,6 +1274,28 @@ const Profile = () => {
       );
   }, [Games]);
 
+  const HandleGameMenuOpen = (Event, Game) => {
+    Event.preventDefault();
+    Event.stopPropagation();
+    const MenuWidth = 280;
+    const MenuHeight = 180;
+    const X = Math.max(0, Math.min(Event.clientX, window.innerWidth - MenuWidth));
+    const Y = Math.max(0, Math.min(Event.clientY, window.innerHeight - MenuHeight));
+    SetGameMenuPosition({ x: X, y: Y });
+    SetGameMenuGame(Game);
+    SetGameMenuOpen(true);
+  };
+
+  const HandleOpenGamePage = Game => {
+    Navigate("/gamescreen", { state: { gameData: Game } });
+  };
+
+  const HandleOpenGameDownloadPage = Game => {
+    Navigate("/download", {
+      state: { gameData: Game, fromProfileGames: true },
+    });
+  };
+
   const PlaytimeStats = UseMemo(() => {
     if (!SortedGames.length) return null;
 
@@ -1389,6 +1415,15 @@ const Profile = () => {
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 px-4 pb-8 !pt-10">
+      <GameContextMenu
+        isOpen={GameMenuOpen}
+        onClose={() => SetGameMenuOpen(false)}
+        position={GameMenuPosition}
+        game={GameMenuGame}
+        profileGameActions
+        onOpenGamePage={HandleOpenGamePage}
+        onReadMore={HandleOpenGameDownloadPage}
+      />
       {RenderProfileHeader()}
 
       <StatStrip
@@ -1441,9 +1476,13 @@ const Profile = () => {
                   {SortedGames.map(Game => {
                     const GameId = Game.game || Game.name;
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={GameId}
-                        className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/40 p-2.5 transition-colors hover:bg-accent/40"
+                        className="flex w-full items-center gap-3 rounded-xl border border-border/50 bg-background/40 p-2.5 text-left transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={Event => HandleGameMenuOpen(Event, Game)}
+                        onContextMenu={Event => HandleGameMenuOpen(Event, Game)}
+                        aria-label={`Open actions for ${GameId}`}
                       >
                         <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
                           {GameImages[GameId] && (
@@ -1461,7 +1500,7 @@ const Profile = () => {
                             {FormatPlayTime(Game.playTime || 0)}
                           </p>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
